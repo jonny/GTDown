@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:basecamp.com)",
+      "WebFetch(domain:todo-management.blogspot.com)",
+      "WebFetch(domain:agiletesting.blogspot.com)",
+      "WebFetch(domain:123.tadalist.com)",
+      "WebFetch(domain:signalvnoise.com)",
+      "WebFetch(domain:alternativeto.net)",
+      "WebFetch(domain:www.macsparky.com)",
+      "Bash(npm create:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/xjxl323/.nvm/versions/**)",
+      "Read(//Users/xjxl323/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(echo $PATH)",
+      "Bash(/opt/homebrew/bin/brew --version)",
+      "Bash(/opt/homebrew/bin/brew install:*)",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(claude config:*)",
+      "Bash(claude auth:*)",
+      "Bash(claude whoami:*)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(xcode-select -p)",
+      "Bash(source \"$HOME/.cargo/env\")",
+      "Bash(npx tauri:*)",
+      "Bash(npx expo:*)",
+      "Bash(npx create-expo-app:*)",
+      "Bash(npx tsc:*)",
+      "Read(//tmp/**)",
+      "Bash(jobs)"
+    ]
+  }
+}
