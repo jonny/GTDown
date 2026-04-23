@@ -293,13 +293,13 @@ const handleSetFilter = useCallback((tag: string | null) => {
               {statusLabel[saveStatus]}
             </span>
           )}
-          <button className="toolbar-btn" onClick={handleArchiveDone} title="Move @done tasks to Done section">Archive Done</button>
           <button className="toolbar-btn" onClick={handleOpen} title="Open file (Cmd+O)">Open</button>
           <button className="toolbar-btn" onClick={handleNew} title="New file (Cmd+N)">New</button>
           <button className="toolbar-btn" onClick={handleSave} title="Save (Cmd+S)">Save</button>
           <button className="toolbar-btn toolbar-btn--copy" onClick={handleCopy} title="Copy as markdown (Cmd+Shift+C)">
             {copied ? 'Copied!' : 'Copy MD'}
           </button>
+          <button className="toolbar-btn" onClick={handleArchiveDone} title="Move @done tasks to Done section">Archive Done</button>
         </div>
       </header>
 
