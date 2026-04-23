@@ -207,7 +207,7 @@ export default function App() {
           >
             ☰
           </button>
-          <span className="app-title">TadaList</span>
+          <span className="app-title">GTDown</span>
           {fileName && <span className="file-name">{fileName}</span>}
           {!fileName && lastFileName && (
             <span className="file-name hint">Last: {lastFileName}</span>

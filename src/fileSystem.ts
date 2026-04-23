@@ -1,3 +1,6 @@
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+
 const LAST_PATH_KEY = 'gtdown_last_path';
 
 function isTauri(): boolean {
@@ -24,8 +27,6 @@ let webFileHandle: FileSystemFileHandle | null = null;
 
 export async function openFile(): Promise<{ path: string; content: string; name: string } | null> {
   if (isTauri()) {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const { readTextFile } = await import('@tauri-apps/plugin-fs');
     try {
       const path = await open({
         multiple: false,
@@ -75,7 +76,6 @@ export async function openFile(): Promise<{ path: string; content: string; name:
 
 export async function saveFile(path: string, content: string): Promise<void> {
   if (isTauri()) {
-    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
     await writeTextFile(path, content);
     return;
   }
@@ -89,8 +89,6 @@ export async function saveFile(path: string, content: string): Promise<void> {
 
 export async function saveNewFile(content: string): Promise<{ path: string; name: string } | null> {
   if (isTauri()) {
-    const { save } = await import('@tauri-apps/plugin-dialog');
-    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
     try {
       const path = await save({
         defaultPath: 'todos.md',
@@ -140,7 +138,6 @@ export async function saveNewFile(content: string): Promise<{ path: string; name
 export async function restoreLastFile(): Promise<{ path: string; content: string; name: string } | null> {
   if (!isTauri()) return null;
   try {
-    const { readTextFile } = await import('@tauri-apps/plugin-fs');
     const path = localStorage.getItem(LAST_PATH_KEY);
     if (!path) return null;
     const content = await readTextFile(path);
