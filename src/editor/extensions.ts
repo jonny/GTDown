@@ -8,7 +8,7 @@ import { strikethroughPlugin } from './strikethroughDecoration';
 import { noteDecorationPlugin } from './noteDecoration';
 import { todoKeymap } from './keymap';
 import { dragToReorderPlugin } from './dragToReorder';
-import { filterTagField, filterHashField, filterDecoField, tagClickHandler } from './tagFilter';
+import { filterTagField, filterHashField, filterProjectField, filterDecoField, tagClickHandler } from './tagFilter';
 import { baseTheme } from './theme';
 
 export function createExtensions(
@@ -23,6 +23,7 @@ export function createExtensions(
     markdown(),
     filterTagField,
     filterHashField,
+    filterProjectField,
     filterDecoField,
     tagClickHandler,
     tagDecorationPlugin,

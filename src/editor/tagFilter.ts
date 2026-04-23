@@ -4,6 +4,7 @@ import { isProjectLine } from './projectDecoration';
 
 export const setFilterEffect = StateEffect.define<string | null>();
 export const setHashFilterEffect = StateEffect.define<string | null>();
+export const setProjectFilterEffect = StateEffect.define<string | null>();
 
 // Stores the active @tag filter, or null
 export const filterTagField = StateField.define<string | null>({
@@ -22,6 +23,17 @@ export const filterHashField = StateField.define<string | null>({
   update: (value: string | null, tr: Transaction) => {
     for (const effect of tr.effects) {
       if (effect.is(setHashFilterEffect)) return effect.value;
+    }
+    return value;
+  },
+});
+
+// Stores the active project filter (project name without trailing colon), or null
+export const filterProjectField = StateField.define<string | null>({
+  create: () => null,
+  update: (value: string | null, tr: Transaction) => {
+    for (const effect of tr.effects) {
+      if (effect.is(setProjectFilterEffect)) return effect.value;
     }
     return value;
   },
@@ -47,25 +59,39 @@ function lineMatchesFilter(text: string, filter: string): boolean {
 function buildFilterDecos(state: EditorState): DecorationSet {
   const atFilter = state.field(filterTagField);
   const hashFilter = state.field(filterHashField);
-  if (!atFilter && !hashFilter) return Decoration.none;
+  const projectFilter = state.field(filterProjectField);
+  if (!atFilter && !hashFilter && !projectFilter) return Decoration.none;
 
   const doc = state.doc;
 
-  // Pass 1: determine visibility for every line (project headers default to false)
+  // Pre-pass: record which project section each line belongs to
+  const lineProject = new Array<string | null>(doc.lines + 1).fill(null);
+  let currentProject: string | null = null;
+  for (let i = 1; i <= doc.lines; i++) {
+    const text = doc.line(i).text;
+    if (isProjectLine(text)) currentProject = text.replace(/:\s*$/, '').trim();
+    lineProject[i] = currentProject;
+  }
+
+  // Pass 1: determine visibility for every non-header line
   const visible = new Array<boolean>(doc.lines + 1).fill(false);
   for (let i = 1; i <= doc.lines; i++) {
     const text = doc.line(i).text;
-    if (isProjectLine(text) || !text.trim()) continue; // handled below / collapsed
+    if (isProjectLine(text) || !text.trim()) continue; // headers handled in pass 2
+    const projectOk = !projectFilter || lineProject[i] === projectFilter;
     const atOk = !atFilter || lineMatchesFilter(text, atFilter);
     const hashOk = !hashFilter || lineMatchesFilter(text, hashFilter);
-    visible[i] = atOk && hashOk;
+    visible[i] = projectOk && atOk && hashOk;
   }
 
   // Pass 2: show a project header only if its section contains a visible task
+  // When a project filter is active, other project headers are always hidden
   for (let i = 1; i <= doc.lines; i++) {
     if (!isProjectLine(doc.line(i).text)) continue;
+    const name = doc.line(i).text.replace(/:\s*$/, '').trim();
+    if (projectFilter && name !== projectFilter) continue; // hide other projects
     for (let j = i + 1; j <= doc.lines; j++) {
-      if (isProjectLine(doc.line(j).text)) break; // reached next section
+      if (isProjectLine(doc.line(j).text)) break;
       if (visible[j]) { visible[i] = true; break; }
     }
   }
@@ -98,7 +124,8 @@ export const filterDecoField = StateField.define<DecorationSet>({
     if (
       tr.docChanged ||
       tr.state.field(filterTagField) !== tr.startState.field(filterTagField) ||
-      tr.state.field(filterHashField) !== tr.startState.field(filterHashField)
+      tr.state.field(filterHashField) !== tr.startState.field(filterHashField) ||
+      tr.state.field(filterProjectField) !== tr.startState.field(filterProjectField)
     ) {
       return buildFilterDecos(tr.state);
     }

@@ -4,7 +4,8 @@ interface SidebarProps {
   hashtags: string[];
   activeFilter: string | null;
   activeHashFilter: string | null;
-  onJumpToProject: (lineNum: number) => void;
+  activeProjectFilter: string | null;
+  onSetProjectFilter: (project: string | null) => void;
   onSetFilter: (tag: string | null) => void;
   onSetHashFilter: (tag: string | null) => void;
 }
@@ -15,7 +16,7 @@ const SAVED_SEARCHES = [
   { label: 'Done', filter: '@done' },
 ];
 
-export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilter, onJumpToProject, onSetFilter, onSetHashFilter }: SidebarProps) {
+export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilter, activeProjectFilter, onSetProjectFilter, onSetFilter, onSetHashFilter }: SidebarProps) {
   return (
     <aside className="sidebar">
       <section className="sidebar-section">
@@ -27,8 +28,8 @@ export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilt
             {projects.map((p) => (
               <li key={p.lineNum}>
                 <button
-                  className="sidebar-item"
-                  onClick={() => onJumpToProject(p.lineNum)}
+                  className={`sidebar-item${activeProjectFilter === p.name ? ' sidebar-item--active' : ''}`}
+                  onClick={() => onSetProjectFilter(activeProjectFilter === p.name ? null : p.name)}
                 >
                   {p.name}
                 </button>

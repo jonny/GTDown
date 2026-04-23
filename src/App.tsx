@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { EditorView } from '@codemirror/view';
 import { TodoEditor } from './editor/TodoEditor';
 import { openFile, saveFile, saveNewFile, copyMarkdown, getLastFileName, restoreLastFile } from './fileSystem';
-import { setFilterEffect, setHashFilterEffect } from './editor/tagFilter';
+import { setFilterEffect, setHashFilterEffect, setProjectFilterEffect } from './editor/tagFilter';
 import { Sidebar } from './Sidebar';
 import './App.css';
 
@@ -28,6 +28,7 @@ Personal:
 export default function App() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [hashFilterTag, setHashFilterTag] = useState<string | null>(null);
+  const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [content, setContent] = useState(SAMPLE_CONTENT);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -85,23 +86,17 @@ export default function App() {
     return { projects: projectList, allTags: Array.from(tagSet).sort(), allHashtags: Array.from(hashSet).sort() };
   }, [content]);
 
-  const jumpToLine = useCallback((lineNum: number) => {
-    const view = editorRef.current;
-    if (!view) return;
-    const line = view.state.doc.line(Math.min(lineNum, view.state.doc.lines));
-    view.dispatch({
-      selection: { anchor: line.from },
-      effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 80 }),
-    });
-    view.focus();
-  }, []);
-
-  const handleSetFilter = useCallback((tag: string | null) => {
+const handleSetFilter = useCallback((tag: string | null) => {
     editorRef.current?.dispatch({ effects: setFilterEffect.of(tag) });
   }, []);
 
   const handleSetHashFilter = useCallback((tag: string | null) => {
     editorRef.current?.dispatch({ effects: setHashFilterEffect.of(tag) });
+  }, []);
+
+  const handleSetProjectFilter = useCallback((name: string | null) => {
+    setProjectFilter(name);
+    editorRef.current?.dispatch({ effects: setProjectFilterEffect.of(name) });
   }, []);
 
   const triggerAutoSave = useCallback((newContent: string) => {
@@ -214,6 +209,15 @@ export default function App() {
           )}
         </div>
         <div className="toolbar-right">
+          {projectFilter && (
+            <button
+              className="filter-chip filter-chip--project"
+              onClick={() => handleSetProjectFilter(null)}
+              title="Clear project filter"
+            >
+              {projectFilter} ×
+            </button>
+          )}
           {filterTag && (
             <button
               className="filter-chip"
@@ -254,7 +258,8 @@ export default function App() {
             hashtags={allHashtags}
             activeFilter={filterTag}
             activeHashFilter={hashFilterTag}
-            onJumpToProject={jumpToLine}
+            activeProjectFilter={projectFilter}
+            onSetProjectFilter={handleSetProjectFilter}
             onSetFilter={handleSetFilter}
             onSetHashFilter={handleSetHashFilter}
           />
