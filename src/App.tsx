@@ -3,6 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { TodoEditor } from './editor/TodoEditor';
 import { openFile, saveFile, saveNewFile, copyMarkdown, getLastFileName, restoreLastFile } from './fileSystem';
 import { setFilterEffect, setHashFilterEffect, setProjectFilterEffect } from './editor/tagFilter';
+import { isProjectLine } from './editor/projectDecoration';
 import { Sidebar } from './Sidebar';
 import './App.css';
 
@@ -24,6 +25,49 @@ Personal:
 \tRemember to check if the store has oat milk
 
 `;
+
+function archiveDone(content: string): string {
+  const lines = content.split('\n');
+
+  // Track which project section each line belongs to
+  let currentProject: string | null = null;
+  const lineProjects = lines.map(line => {
+    if (isProjectLine(line)) currentProject = line.replace(/:\s*$/, '').trim();
+    return currentProject;
+  });
+
+  // Pull out @done tasks that aren't already in the Done section
+  const doneTasks: string[] = [];
+  const remainingLines: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*- /.test(line) && /@done/.test(line) && lineProjects[i] !== 'Done') {
+      doneTasks.push(line);
+    } else {
+      remainingLines.push(line);
+    }
+  }
+
+  if (doneTasks.length === 0) return content;
+
+  // Find an existing "Done:" section
+  const doneHeaderIdx = remainingLines.findIndex(
+    l => isProjectLine(l) && l.replace(/:\s*$/, '').trim() === 'Done'
+  );
+
+  if (doneHeaderIdx !== -1) {
+    // Prepend to the top of the existing Done section
+    remainingLines.splice(doneHeaderIdx + 1, 0, ...doneTasks);
+  } else {
+    // Create a new Done section at the bottom
+    while (remainingLines.length > 0 && remainingLines[remainingLines.length - 1].trim() === '') {
+      remainingLines.pop();
+    }
+    remainingLines.push('', 'Done:', ...doneTasks, '');
+  }
+
+  return remainingLines.join('\n');
+}
 
 export default function App() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -169,6 +213,14 @@ const handleSetFilter = useCallback((tag: string | null) => {
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
+  const handleArchiveDone = useCallback(() => {
+    const view = editorRef.current;
+    if (!view) return;
+    const newContent = archiveDone(view.state.doc.toString());
+    if (newContent === view.state.doc.toString()) return;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: newContent } });
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
@@ -241,6 +293,7 @@ const handleSetFilter = useCallback((tag: string | null) => {
               {statusLabel[saveStatus]}
             </span>
           )}
+          <button className="toolbar-btn" onClick={handleArchiveDone} title="Move @done tasks to Done section">Archive Done</button>
           <button className="toolbar-btn" onClick={handleOpen} title="Open file (Cmd+O)">Open</button>
           <button className="toolbar-btn" onClick={handleNew} title="New file (Cmd+N)">New</button>
           <button className="toolbar-btn" onClick={handleSave} title="Save (Cmd+S)">Save</button>
