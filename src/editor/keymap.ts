@@ -49,7 +49,7 @@ const handleEnter = (view: import('@codemirror/view').EditorView): boolean => {
     return true;
   }
 
-  // Indented non-task line? Continue indentation
+  // Indented non-task (note) line? Create a new task at the same indentation
   const noteMatch = text.match(/^([ \t]+)/);
   if (noteMatch) {
     const indent = noteMatch[1];
@@ -62,7 +62,8 @@ const handleEnter = (view: import('@codemirror/view').EditorView): boolean => {
         annotations: Transaction.userEvent.of('input'),
       });
     } else {
-      const insert = '\n' + indent;
+      // Non-empty note → start a new task below with same indentation
+      const insert = '\n' + indent + '- ';
       view.dispatch({
         changes: { from, to: state.selection.main.to, insert },
         selection: EditorSelection.cursor(from + insert.length),
