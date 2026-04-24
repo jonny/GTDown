@@ -73,26 +73,47 @@ function buildFilterDecos(state: EditorState): DecorationSet {
     lineProject[i] = currentProject;
   }
 
-  // Pass 1: determine visibility for every non-header line
-  const visible = new Array<boolean>(doc.lines + 1).fill(false);
+  // Pass 1: determine visibility for task/note lines (non-header, non-empty)
+  const taskVisible = new Array<boolean>(doc.lines + 1).fill(false);
   for (let i = 1; i <= doc.lines; i++) {
     const text = doc.line(i).text;
-    if (isProjectLine(text) || !text.trim()) continue; // headers handled in pass 2
+    if (isProjectLine(text) || !text.trim()) continue;
     const projectOk = !projectFilter || lineProject[i] === projectFilter;
     const atOk = !atFilter || lineMatchesFilter(text, atFilter);
     const hashOk = !hashFilter || lineMatchesFilter(text, hashFilter);
-    visible[i] = projectOk && atOk && hashOk;
+    taskVisible[i] = projectOk && atOk && hashOk;
   }
 
-  // Pass 2: show a project header only if its section contains a visible task
-  // When a project filter is active, other project headers are always hidden
+  // Pass 2: determine which project sections have visible tasks
+  const projectHasVisibleTask = new Map<string, boolean>();
   for (let i = 1; i <= doc.lines; i++) {
     if (!isProjectLine(doc.line(i).text)) continue;
     const name = doc.line(i).text.replace(/:\s*$/, '').trim();
-    if (projectFilter && name !== projectFilter) continue; // hide other projects
+    if (projectFilter && name !== projectFilter) {
+      projectHasVisibleTask.set(name, false);
+      continue;
+    }
+    let hasTask = false;
     for (let j = i + 1; j <= doc.lines; j++) {
       if (isProjectLine(doc.line(j).text)) break;
-      if (visible[j]) { visible[i] = true; break; }
+      if (taskVisible[j]) { hasTask = true; break; }
+    }
+    projectHasVisibleTask.set(name, hasTask);
+  }
+
+  // Build final visible array: project headers, task lines, and empty lines
+  const visible = new Array<boolean>(doc.lines + 1).fill(false);
+  for (let i = 1; i <= doc.lines; i++) {
+    const text = doc.line(i).text;
+    if (isProjectLine(text)) {
+      const name = text.replace(/:\s*$/, '').trim();
+      visible[i] = projectHasVisibleTask.get(name) ?? false;
+    } else if (!text.trim()) {
+      // Empty lines: show when their project section has visible tasks (or no project)
+      const proj = lineProject[i];
+      visible[i] = proj === null ? true : (projectHasVisibleTask.get(proj) ?? false);
+    } else {
+      visible[i] = taskVisible[i];
     }
   }
 
