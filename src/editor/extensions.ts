@@ -7,7 +7,6 @@ import { projectDecorationPlugin } from './projectDecoration';
 import { strikethroughPlugin } from './strikethroughDecoration';
 import { noteDecorationPlugin } from './noteDecoration';
 import { todoKeymap } from './keymap';
-import { dragToReorderPlugin } from './dragToReorder';
 import { filterTagField, filterHashField, filterProjectField, filterDecoField, tagClickHandler } from './tagFilter';
 import { baseTheme } from './theme';
 
@@ -30,7 +29,6 @@ export function createExtensions(
     projectDecorationPlugin,
     strikethroughPlugin,
     noteDecorationPlugin,
-    dragToReorderPlugin,
     keymap.of([
       ...todoKeymap,
       ...defaultKeymap,

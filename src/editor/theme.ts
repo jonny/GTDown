@@ -64,33 +64,6 @@ const baseTheme = EditorView.baseTheme({
     cursor: 'default',
   },
 
-  // Drag handle (shown via line hover)
-  '.cm-drag-handle': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'grab',
-    opacity: '0',
-    position: 'absolute',
-    left: '-28px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: 'var(--color-drag-handle)',
-    padding: '2px',
-    borderRadius: '3px',
-    transition: 'opacity 0.1s',
-    userSelect: 'none',
-  },
-  '.cm-line:hover .cm-drag-handle': {
-    opacity: '1',
-  },
-  '.cm-drag-handle:active': {
-    cursor: 'grabbing',
-  },
-  '.cm-dragging': {
-    opacity: '0.5',
-  },
-
   // Note / description lines (indented text under a task)
   '.cm-note-line': {
     color: 'var(--color-text-muted)',

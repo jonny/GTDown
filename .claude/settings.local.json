@@ -17,7 +17,10 @@
       "Bash(npx *)",
       "Bash(find /Users/xjxl323/dev/claude-experiments/GTDown/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec wc -l {} +)",
       "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown status)",
-      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown diff)"
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown diff)",
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown log --oneline)",
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown add SPEC.md)",
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown add -A)"
     ]
   }
 }

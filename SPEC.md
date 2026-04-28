@@ -96,10 +96,6 @@ Done:
 - `#labels` — class `.cm-tag-hash`, purple colour, weight 500, slight border-radius
 - Neither is decorated on the cursor's current line
 
-### Drag Handle
-- Six-dot SVG, opacity 0 by default, appears on line hover
-- Cursor: `grab` / `grabbing`
-
 ### Dark Mode
 All colours use CSS custom properties; automatic via `@media (prefers-color-scheme: dark)`.
 
@@ -234,17 +230,6 @@ Hidden lines are replaced with zero-height block widgets (collapsed, not removed
 | Today | `@today` |
 | Not Done | `!@done` |
 | Done | `@done` |
-
----
-
-## Drag to Reorder
-
-- **Handle:** six-dot SVG icon, left of each line, visible on hover
-- **Drop indicator:** thin horizontal line at the target insertion point
-- Dragging moves a single line; indentation is preserved
-- On drop, the document is fully reconstructed with the new line order
-- Drag handles are only rebuilt on viewport change (not on every keystroke) to prevent scroll jumps
-- Dragging to the same position is a no-op
 
 ---
 
