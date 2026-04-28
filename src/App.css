@@ -6,7 +6,6 @@
   --color-text: #1a1a18;
   --color-text-muted: #8c8c89;
   --color-heading: #111110;
-  --color-heading-3: #444440;
   --color-accent: #2563eb;
   --color-selection: rgba(37, 99, 235, 0.15);
   --color-tag-at: #0369a1;
@@ -145,11 +144,6 @@ html, body {
 .toolbar-btn--copy {
   min-width: 72px;
   text-align: center;
-}
-
-.toolbar-btn--reopen {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
 
 .filter-chip {
@@ -342,7 +336,7 @@ html, body {
 
 /* Placeholder text */
 .editor-container .cm-content[data-empty="true"]::before {
-  content: 'Start typing... (- [ ] for a task, ## for a heading)';
+  content: 'Start typing... (- for a task, indented text for a note)';
   color: var(--color-text-muted);
   pointer-events: none;
   position: absolute;

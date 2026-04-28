@@ -20,7 +20,9 @@
       "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown diff)",
       "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown log --oneline)",
       "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown add SPEC.md)",
-      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown add -A)"
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown add -A)",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ]
   }
 }

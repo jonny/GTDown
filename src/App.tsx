@@ -130,7 +130,7 @@ export default function App() {
     return { projects: projectList, allTags: Array.from(tagSet).sort(), allHashtags: Array.from(hashSet).sort() };
   }, [content]);
 
-const handleSetFilter = useCallback((tag: string | null) => {
+  const handleSetFilter = useCallback((tag: string | null) => {
     editorRef.current?.dispatch({ effects: setFilterEffect.of(tag) });
   }, []);
 

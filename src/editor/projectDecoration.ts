@@ -4,7 +4,7 @@ import { RangeSetBuilder } from '@codemirror/state';
 // A "project" line is any line that ends with ':' and has content before it.
 // e.g. "Inbox:" or "Work:" or "My Project:"
 export function isProjectLine(text: string): boolean {
-  return /^[^\t\-].*:\s*$/.test(text) && text.trim().length > 1;
+  return /^[^\t-].*:\s*$/.test(text) && text.trim().length > 1;
 }
 
 function buildProjectDecos(view: EditorView): DecorationSet {
