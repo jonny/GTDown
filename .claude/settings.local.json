@@ -9,7 +9,15 @@
       "Bash(git rm *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(identify /Users/xjxl323/dev/claude-experiments/GTDown/src-tauri/icons/icon.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/xjxl323/dev/claude-experiments/GTDown/src-tauri/icons/icon.png)",
+      "Bash(ls /Users/xjxl323/dev/claude-experiments/GTDown/*.py /Users/xjxl323/dev/claude-experiments/GTDown/*.js /Users/xjxl323/dev/claude-experiments/GTDown/*.ts)",
+      "Bash(python3 *)",
+      "Bash(npx *)",
+      "Bash(find /Users/xjxl323/dev/claude-experiments/GTDown/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec wc -l {} +)",
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown status)",
+      "Bash(git -C /Users/xjxl323/dev/claude-experiments/GTDown diff)"
     ]
   }
 }

@@ -147,6 +147,53 @@ const handleBackspace = (view: import('@codemirror/view').EditorView): boolean =
   return false;
 };
 
+// Alt+Cmd+Up/Down: move the selected block of lines up or down by one line
+const handleMoveUp = (view: import('@codemirror/view').EditorView): boolean => {
+  const { state } = view;
+  const sel = state.selection.main;
+  const firstLine = state.doc.lineAt(sel.from);
+  const lastLine = !sel.empty && sel.to === state.doc.lineAt(sel.to).from
+    ? state.doc.lineAt(sel.to - 1)
+    : state.doc.lineAt(sel.to);
+
+  if (firstLine.number === 1) return true;
+
+  const prevLine = state.doc.line(firstLine.number - 1);
+  const blockText = state.doc.sliceString(firstLine.from, lastLine.to);
+  const delta = -(prevLine.text.length + 1);
+
+  view.dispatch({
+    changes: { from: prevLine.from, to: lastLine.to, insert: blockText + '\n' + prevLine.text },
+    selection: EditorSelection.range(sel.anchor + delta, sel.head + delta),
+    annotations: Transaction.userEvent.of('move'),
+    scrollIntoView: true,
+  });
+  return true;
+};
+
+const handleMoveDown = (view: import('@codemirror/view').EditorView): boolean => {
+  const { state } = view;
+  const sel = state.selection.main;
+  const firstLine = state.doc.lineAt(sel.from);
+  const lastLine = !sel.empty && sel.to === state.doc.lineAt(sel.to).from
+    ? state.doc.lineAt(sel.to - 1)
+    : state.doc.lineAt(sel.to);
+
+  if (lastLine.number === state.doc.lines) return true;
+
+  const nextLine = state.doc.line(lastLine.number + 1);
+  const blockText = state.doc.sliceString(firstLine.from, lastLine.to);
+  const delta = nextLine.text.length + 1;
+
+  view.dispatch({
+    changes: { from: firstLine.from, to: nextLine.to, insert: nextLine.text + '\n' + blockText },
+    selection: EditorSelection.range(sel.anchor + delta, sel.head + delta),
+    annotations: Transaction.userEvent.of('move'),
+    scrollIntoView: true,
+  });
+  return true;
+};
+
 // Escape: clear any active tag filter first; if none, blur the editor
 const handleEscape = (view: import('@codemirror/view').EditorView): boolean => {
   const activeFilter = view.state.field(filterTagField, false);
@@ -165,4 +212,6 @@ export const todoKeymap: readonly KeyBinding[] = [
   { key: 'Shift-Tab', run: handleShiftTab, preventDefault: true },
   { key: 'Backspace', run: handleBackspace },
   { key: 'Escape', run: handleEscape },
+  { key: 'Alt-Mod-ArrowUp', run: handleMoveUp, preventDefault: true },
+  { key: 'Alt-Mod-ArrowDown', run: handleMoveDown, preventDefault: true },
 ];
