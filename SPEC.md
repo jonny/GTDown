@@ -206,8 +206,8 @@ Sits below the toolbar. One tab per open file.
 | Browser (FSA) | `showSaveFilePicker()`, default `todos.md` |
 | Browser fallback | Download with filename `todos.md` |
 
-### Last File Restoration
-On launch (Tauri only), the last opened path is restored from `localStorage` into the initial tab without a permission prompt. If the file is missing, the stored path is cleared.
+### Session Restoration
+On launch (Tauri only), all tabs from the previous session are restored from `localStorage` (`gtdown_open_tabs`), including which tab was active. Files that are missing or unreadable are skipped silently. Falls back to the legacy `gtdown_last_path` key on first run after upgrade. Browsers cannot restore tabs automatically (requires a user gesture to open a file handle).
 
 ---
 

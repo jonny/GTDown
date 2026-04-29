@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { EditorView } from '@codemirror/view';
 import { TodoEditor } from './editor/TodoEditor';
-import { openFile, saveFile, saveNewFile, copyMarkdown, restoreLastFile } from './fileSystem';
+import { openFile, saveFile, saveNewFile, copyMarkdown, saveOpenTabs, restoreOpenTabs } from './fileSystem';
 import { setFilterEffect, setHashFilterEffect, setProjectFilterEffect } from './editor/tagFilter';
 import { isProjectLine } from './editor/projectDecoration';
 import { Sidebar } from './Sidebar';
@@ -104,18 +104,34 @@ export default function App() {
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
 
-  // Restore last file into the initial tab on mount
+  // Restore all open tabs from previous session on mount
   useEffect(() => {
-    restoreLastFile().then(result => {
-      if (!result) return;
-      setTabs(prev => prev.map((t, i) =>
-        i === 0 && t.filePath === null
-          ? { ...t, filePath: result.path, fileName: result.name, content: result.content, saveStatus: 'saved' }
-          : t
-      ));
+    restoreOpenTabs().then(results => {
+      if (!results || results.length === 0) return;
+      const restoredTabs: Tab[] = results.map(r => ({
+        id: `tab-${tabIdCounter.current++}`,
+        filePath: r.path,
+        fileName: r.name,
+        content: r.content,
+        saveStatus: 'saved' as SaveStatus,
+        filterTags: [],
+        hashFilterTags: [],
+        projectFilter: null,
+      }));
+      const activeIdx = results.findIndex(r => r.active);
+      const activeRestoredTab = restoredTabs[activeIdx === -1 ? 0 : activeIdx];
+      setTabs(restoredTabs);
+      setActiveTabId(activeRestoredTab.id);
+      activeTabIdRef.current = activeRestoredTab.id;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist open tabs whenever the set of files or active tab changes
+  useEffect(() => {
+    const paths = tabs.flatMap(t => t.filePath ? [t.filePath] : []);
+    saveOpenTabs(paths, activeTab.filePath);
+  }, [tabs, activeTabId]); // tabs ref changes on content edits but saveOpenTabs is cheap
 
   // Save active tab immediately on window hide
   useEffect(() => {

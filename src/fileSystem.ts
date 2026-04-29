@@ -2,6 +2,12 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 const LAST_PATH_KEY = 'gtdown_last_path';
+const OPEN_TABS_KEY = 'gtdown_open_tabs';
+
+interface PersistedTabs {
+  paths: string[];
+  activePath: string | null;
+}
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -132,6 +138,46 @@ export async function saveNewFile(content: string): Promise<{ path: string; name
   a.click();
   URL.revokeObjectURL(url);
   return { path: 'todos.md', name: 'todos.md' };
+}
+
+export function saveOpenTabs(paths: string[], activePath: string | null): void {
+  try {
+    const data: PersistedTabs = { paths, activePath };
+    localStorage.setItem(OPEN_TABS_KEY, JSON.stringify(data));
+  } catch { /* ignore */ }
+}
+
+// Tauri only — browsers can't reopen a file by path without a user gesture
+export async function restoreOpenTabs(): Promise<Array<{ path: string; content: string; name: string; active: boolean }> | null> {
+  if (!isTauri()) return null;
+  try {
+    const raw = localStorage.getItem(OPEN_TABS_KEY);
+    // Fall back to legacy single-file key on first run after upgrade
+    if (!raw) {
+      const path = localStorage.getItem(LAST_PATH_KEY);
+      if (!path) return null;
+      try {
+        const content = await readTextFile(path);
+        return [{ path, content, name: pathToName(path), active: true }];
+      } catch {
+        try { localStorage.removeItem(LAST_PATH_KEY); } catch { /* ignore */ }
+        return null;
+      }
+    }
+    const { paths, activePath } = JSON.parse(raw) as PersistedTabs;
+    const results: Array<{ path: string; content: string; name: string; active: boolean }> = [];
+    for (const path of paths) {
+      try {
+        const content = await readTextFile(path);
+        results.push({ path, content, name: pathToName(path), active: path === activePath });
+      } catch {
+        // File missing or unreadable — skip it silently
+      }
+    }
+    return results.length > 0 ? results : null;
+  } catch {
+    return null;
+  }
 }
 
 // Tauri only — browsers can't reopen a file by path without a user gesture
