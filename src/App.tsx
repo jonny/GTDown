@@ -345,14 +345,26 @@ export default function App() {
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: newContent } });
   }, []);
 
+  const navigateTab = useCallback((direction: 'left' | 'right') => {
+    const current = tabsRef.current;
+    const idx = current.findIndex(t => t.id === activeTabIdRef.current);
+    if (idx === -1 || current.length < 2) return;
+    const next = direction === 'left'
+      ? (idx - 1 + current.length) % current.length
+      : (idx + 1) % current.length;
+    switchToTab(current[next].id);
+  }, [switchToTab]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'o') { e.preventDefault(); handleOpen(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); handleNew(); }
+      else if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); navigateTab('left'); }
+      else if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === 'ArrowRight') { e.preventDefault(); navigateTab('right'); }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleOpen, handleNew]);
+  }, [handleOpen, handleNew, navigateTab]);
 
   const statusLabel: Record<SaveStatus, string> = {
     saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', error: 'Error saving',

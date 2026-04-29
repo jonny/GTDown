@@ -117,6 +117,8 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 | **Cmd+Shift+C** / Ctrl+Shift+C | Copy document to clipboard as plain text |
 | **Cmd+O** / Ctrl+O | Open file |
 | **Cmd+N** / Ctrl+N | New file |
+| **Opt+Cmd+←** / Alt+Ctrl+← | Switch to previous tab |
+| **Opt+Cmd+→** / Alt+Ctrl+→ | Switch to next tab |
 
 ### Enter — Smart Insertion Rules
 
