@@ -11,7 +11,7 @@ interface SidebarProps {
 }
 
 const SAVED_SEARCHES = [
-  { label: 'Today', filter: '@today' },
+  { label: 'Now', filter: '@now' },
   { label: 'Not Done', filter: '!@done' },
   { label: 'Done', filter: '@done' },
 ];

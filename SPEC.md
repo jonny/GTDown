@@ -227,7 +227,7 @@ Hidden lines are replaced with zero-height block widgets (collapsed, not removed
 ### Saved Searches (sidebar, fixed)
 | Name | Filter |
 |---|---|
-| Today | `@today` |
+| Now | `@now` |
 | Not Done | `!@done` |
 | Done | `@done` |
 
@@ -277,7 +277,7 @@ Toggled by the ☰ button. Sections:
 
 **Projects** — all project lines in document order; click to filter, click again to clear.
 
-**Searches** — fixed saved searches (Today, Not Done, Done).
+**Searches** — fixed saved searches (Now, Not Done, Done).
 
 **Tags** — unique `@tags` found in the document, sorted alphabetically; hidden if none exist.
 
