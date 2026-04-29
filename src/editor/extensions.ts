@@ -12,8 +12,8 @@ import { baseTheme } from './theme';
 
 export function createExtensions(
   onSave: () => void,
-  onFilterChange?: (tag: string | null) => void,
-  onHashFilterChange?: (tag: string | null) => void,
+  onFilterChange?: (tags: string[]) => void,
+  onHashFilterChange?: (tags: string[]) => void,
 ) {
   return [
     history(),
@@ -50,11 +50,11 @@ export function createExtensions(
     // Lift filter state changes up to React
     EditorView.updateListener.of((update) => {
       const atPrev = update.startState.field(filterTagField);
-      const atNext = update.state.field(filterTagField) as string | null;
+      const atNext = update.state.field(filterTagField);
       if (atPrev !== atNext) onFilterChange?.(atNext);
 
       const hashPrev = update.startState.field(filterHashField);
-      const hashNext = update.state.field(filterHashField) as string | null;
+      const hashNext = update.state.field(filterHashField);
       if (hashPrev !== hashNext) onHashFilterChange?.(hashNext);
     }),
     baseTheme,

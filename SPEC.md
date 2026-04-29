@@ -146,10 +146,10 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 
 ### Right Side
 
-**Filter chips** (visible when a filter is active)
-- Project chip — dark style, × to clear
-- @Tag chip — blue style, × to clear
-- #Label chip — purple style, × to clear
+**Filter chips** (visible when filters are active)
+- Project chip — dark style, × to clear (single selection)
+- @Tag chips — blue style, one chip per active filter, × to remove individually
+- #Label chips — purple style, one chip per active filter, × to remove individually
 
 **Save status** (when a file is open)
 - `Saved` — green
@@ -204,9 +204,9 @@ On launch (Tauri only), the last opened path is restored from `localStorage` wit
 Three independent filter axes — project, @tag, #label — combinable with AND logic.
 
 ### Activating Filters
-- **Sidebar:** click a project, tag, or label
-- **Editor:** Cmd/Ctrl+click on any `@tag` or `#label` in the text
-- Clicking the same item again clears that filter
+- **Sidebar:** click a project, tag, or label — multiple `@tag` and `#label` filters can be active simultaneously; project filter is single-select
+- **Editor:** Cmd/Ctrl+click on any `@tag` or `#label` in the text to toggle it in/out of the active set
+- Clicking an already-active item removes it from the active set
 
 ### Negative Filters
 Prefix with `!` to exclude (e.g. `!@done` = show all non-done tasks). Used internally by the "Not Done" saved search.
@@ -220,9 +220,9 @@ Prefix with `!` to exclude (e.g. `!@done` = show all non-done tasks). Used inter
 Hidden lines are replaced with zero-height block widgets (collapsed, not removed).
 
 ### Clearing Filters
-- Click the × on a toolbar filter chip
-- Press **Escape** (clears @tag filter only)
-- Click the same sidebar item again
+- Click the × on any individual toolbar filter chip to remove that filter
+- Press **Escape** (clears all active @tag filters at once)
+- Click an active sidebar item to remove it from the active set
 
 ### Saved Searches (sidebar, fixed)
 | Name | Filter |
@@ -291,5 +291,5 @@ Empty state: "No projects yet" shown when no projects exist.
 
 - **Cursor-line decoration suppression:** decorations (project style, note style, tags) are not applied to the line the cursor is currently on, preventing flicker during editing.
 - **Negative filters** (`!@tag`) are functional but not exposed in the UI beyond the fixed "Not Done" search.
-- **Filter combining** is AND across all three axes simultaneously.
+- **Filter combining** is AND across all active filters: a task must match every selected @tag, every selected #label, and the project filter (if set).
 - **Last file restore** works on Tauri only; browsers require a user gesture to re-open a file handle.

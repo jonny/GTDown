@@ -70,8 +70,8 @@ function archiveDone(content: string): string {
 }
 
 export default function App() {
-  const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [hashFilterTag, setHashFilterTag] = useState<string | null>(null);
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [hashFilterTags, setHashFilterTags] = useState<string[]>([]);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [content, setContent] = useState(SAMPLE_CONTENT);
   const [filePath, setFilePath] = useState<string | null>(null);
@@ -130,12 +130,20 @@ export default function App() {
     return { projects: projectList, allTags: Array.from(tagSet).sort(), allHashtags: Array.from(hashSet).sort() };
   }, [content]);
 
-  const handleSetFilter = useCallback((tag: string | null) => {
-    editorRef.current?.dispatch({ effects: setFilterEffect.of(tag) });
+  const handleSetFilter = useCallback((tag: string) => {
+    setFilterTags(prev => {
+      const next = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag];
+      editorRef.current?.dispatch({ effects: setFilterEffect.of(next) });
+      return next;
+    });
   }, []);
 
-  const handleSetHashFilter = useCallback((tag: string | null) => {
-    editorRef.current?.dispatch({ effects: setHashFilterEffect.of(tag) });
+  const handleSetHashFilter = useCallback((tag: string) => {
+    setHashFilterTags(prev => {
+      const next = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag];
+      editorRef.current?.dispatch({ effects: setHashFilterEffect.of(next) });
+      return next;
+    });
   }, []);
 
   const handleSetProjectFilter = useCallback((name: string | null) => {
@@ -270,24 +278,26 @@ export default function App() {
               {projectFilter} ×
             </button>
           )}
-          {filterTag && (
+          {filterTags.map(tag => (
             <button
+              key={tag}
               className="filter-chip"
-              onClick={() => handleSetFilter(null)}
-              title="Clear filter (Escape)"
+              onClick={() => handleSetFilter(tag)}
+              title="Remove filter"
             >
-              {filterTag} ×
+              {tag} ×
             </button>
-          )}
-          {hashFilterTag && (
+          ))}
+          {hashFilterTags.map(tag => (
             <button
+              key={tag}
               className="filter-chip filter-chip--hash"
-              onClick={() => handleSetHashFilter(null)}
-              title="Clear label filter"
+              onClick={() => handleSetHashFilter(tag)}
+              title="Remove label filter"
             >
-              {hashFilterTag} ×
+              {tag} ×
             </button>
-          )}
+          ))}
           {filePath && (
             <span className={`save-status save-status--${saveStatus}`}>
               {statusLabel[saveStatus]}
@@ -309,8 +319,8 @@ export default function App() {
             projects={projects}
             tags={allTags}
             hashtags={allHashtags}
-            activeFilter={filterTag}
-            activeHashFilter={hashFilterTag}
+            activeFilter={filterTags}
+            activeHashFilter={hashFilterTags}
             activeProjectFilter={projectFilter}
             onSetProjectFilter={handleSetProjectFilter}
             onSetFilter={handleSetFilter}
@@ -322,8 +332,8 @@ export default function App() {
             initialContent={content}
             onChange={handleChange}
             onSave={handleSave}
-            onFilterChange={setFilterTag}
-            onHashFilterChange={setHashFilterTag}
+            onFilterChange={setFilterTags}
+            onHashFilterChange={setHashFilterTags}
             editorRef={editorRef}
           />
         </main>

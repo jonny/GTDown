@@ -2,12 +2,12 @@ interface SidebarProps {
   projects: Array<{ name: string; lineNum: number }>;
   tags: string[];
   hashtags: string[];
-  activeFilter: string | null;
-  activeHashFilter: string | null;
+  activeFilter: string[];
+  activeHashFilter: string[];
   activeProjectFilter: string | null;
   onSetProjectFilter: (project: string | null) => void;
-  onSetFilter: (tag: string | null) => void;
-  onSetHashFilter: (tag: string | null) => void;
+  onSetFilter: (tag: string) => void;
+  onSetHashFilter: (tag: string) => void;
 }
 
 const SAVED_SEARCHES = [
@@ -45,8 +45,8 @@ export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilt
           {SAVED_SEARCHES.map(({ label, filter }) => (
             <li key={filter}>
               <button
-                className={`sidebar-item${activeFilter === filter ? ' sidebar-item--active' : ''}`}
-                onClick={() => onSetFilter(activeFilter === filter ? null : filter)}
+                className={`sidebar-item${activeFilter.includes(filter) ? ' sidebar-item--active' : ''}`}
+                onClick={() => onSetFilter(filter)}
               >
                 {label}
               </button>
@@ -62,8 +62,8 @@ export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilt
             {tags.map((tag) => (
               <li key={tag}>
                 <button
-                  className={`sidebar-item sidebar-item--tag${activeFilter === tag ? ' sidebar-item--active' : ''}`}
-                  onClick={() => onSetFilter(activeFilter === tag ? null : tag)}
+                  className={`sidebar-item sidebar-item--tag${activeFilter.includes(tag) ? ' sidebar-item--active' : ''}`}
+                  onClick={() => onSetFilter(tag)}
                 >
                   {tag}
                 </button>
@@ -80,8 +80,8 @@ export function Sidebar({ projects, tags, hashtags, activeFilter, activeHashFilt
             {hashtags.map((tag) => (
               <li key={tag}>
                 <button
-                  className={`sidebar-item sidebar-item--hash${activeHashFilter === tag ? ' sidebar-item--active' : ''}`}
-                  onClick={() => onSetHashFilter(activeHashFilter === tag ? null : tag)}
+                  className={`sidebar-item sidebar-item--hash${activeHashFilter.includes(tag) ? ' sidebar-item--active' : ''}`}
+                  onClick={() => onSetHashFilter(tag)}
                 >
                   {tag}
                 </button>

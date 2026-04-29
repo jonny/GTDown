@@ -196,9 +196,9 @@ const handleMoveDown = (view: import('@codemirror/view').EditorView): boolean =>
 
 // Escape: clear any active tag filter first; if none, blur the editor
 const handleEscape = (view: import('@codemirror/view').EditorView): boolean => {
-  const activeFilter = view.state.field(filterTagField, false);
-  if (activeFilter) {
-    view.dispatch({ effects: setFilterEffect.of(null) });
+  const activeFilters = view.state.field(filterTagField, false);
+  if (activeFilters && activeFilters.length > 0) {
+    view.dispatch({ effects: setFilterEffect.of([]) });
     return true;
   }
   view.contentDOM.blur();

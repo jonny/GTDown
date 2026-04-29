@@ -2,14 +2,14 @@ import { EditorView, Decoration, type DecorationSet, WidgetType } from '@codemir
 import { StateField, StateEffect, RangeSetBuilder, type EditorState, type Transaction } from '@codemirror/state';
 import { isProjectLine } from './projectDecoration';
 
-export const setFilterEffect = StateEffect.define<string | null>();
-export const setHashFilterEffect = StateEffect.define<string | null>();
+export const setFilterEffect = StateEffect.define<string[]>();
+export const setHashFilterEffect = StateEffect.define<string[]>();
 export const setProjectFilterEffect = StateEffect.define<string | null>();
 
-// Stores the active @tag filter, or null
-export const filterTagField = StateField.define<string | null>({
-  create: () => null,
-  update: (value: string | null, tr: Transaction) => {
+// Stores the active @tag filters (AND semantics)
+export const filterTagField = StateField.define<string[]>({
+  create: () => [],
+  update: (value: string[], tr: Transaction) => {
     for (const effect of tr.effects) {
       if (effect.is(setFilterEffect)) return effect.value;
     }
@@ -17,10 +17,10 @@ export const filterTagField = StateField.define<string | null>({
   },
 });
 
-// Stores the active #tag filter, or null
-export const filterHashField = StateField.define<string | null>({
-  create: () => null,
-  update: (value: string | null, tr: Transaction) => {
+// Stores the active #tag filters (AND semantics)
+export const filterHashField = StateField.define<string[]>({
+  create: () => [],
+  update: (value: string[], tr: Transaction) => {
     for (const effect of tr.effects) {
       if (effect.is(setHashFilterEffect)) return effect.value;
     }
@@ -57,10 +57,10 @@ function lineMatchesFilter(text: string, filter: string): boolean {
 }
 
 function buildFilterDecos(state: EditorState): DecorationSet {
-  const atFilter = state.field(filterTagField);
-  const hashFilter = state.field(filterHashField);
+  const atFilters = state.field(filterTagField);
+  const hashFilters = state.field(filterHashField);
   const projectFilter = state.field(filterProjectField);
-  if (!atFilter && !hashFilter && !projectFilter) return Decoration.none;
+  if (!atFilters.length && !hashFilters.length && !projectFilter) return Decoration.none;
 
   const doc = state.doc;
 
@@ -79,8 +79,8 @@ function buildFilterDecos(state: EditorState): DecorationSet {
     const text = doc.line(i).text;
     if (isProjectLine(text) || !text.trim()) continue;
     const projectOk = !projectFilter || lineProject[i] === projectFilter;
-    const atOk = !atFilter || lineMatchesFilter(text, atFilter);
-    const hashOk = !hashFilter || lineMatchesFilter(text, hashFilter);
+    const atOk = atFilters.every(f => lineMatchesFilter(text, f));
+    const hashOk = hashFilters.every(f => lineMatchesFilter(text, f));
     taskVisible[i] = projectOk && atOk && hashOk;
   }
 
@@ -166,10 +166,12 @@ export const tagClickHandler = EditorView.domEventHandlers({
     if (!tag) return false;
     if (isHashTag) {
       const current = view.state.field(filterHashField);
-      view.dispatch({ effects: setHashFilterEffect.of(current === tag ? null : tag) });
+      const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag];
+      view.dispatch({ effects: setHashFilterEffect.of(next) });
     } else {
       const current = view.state.field(filterTagField);
-      view.dispatch({ effects: setFilterEffect.of(current === tag ? null : tag) });
+      const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag];
+      view.dispatch({ effects: setFilterEffect.of(next) });
     }
     return true;
   },

@@ -7,8 +7,8 @@ interface TodoEditorProps {
   initialContent: string;
   onChange: (content: string) => void;
   onSave: () => void;
-  onFilterChange?: (tag: string | null) => void;
-  onHashFilterChange?: (tag: string | null) => void;
+  onFilterChange?: (tags: string[]) => void;
+  onHashFilterChange?: (tags: string[]) => void;
   editorRef?: React.MutableRefObject<EditorView | null>;
 }
 
