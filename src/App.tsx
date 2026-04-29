@@ -1,13 +1,24 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { EditorView } from '@codemirror/view';
 import { TodoEditor } from './editor/TodoEditor';
-import { openFile, saveFile, saveNewFile, copyMarkdown, getLastFileName, restoreLastFile } from './fileSystem';
+import { openFile, saveFile, saveNewFile, copyMarkdown, restoreLastFile } from './fileSystem';
 import { setFilterEffect, setHashFilterEffect, setProjectFilterEffect } from './editor/tagFilter';
 import { isProjectLine } from './editor/projectDecoration';
 import { Sidebar } from './Sidebar';
 import './App.css';
 
 type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
+
+interface Tab {
+  id: string;
+  filePath: string | null;
+  fileName: string | null;
+  content: string;
+  saveStatus: SaveStatus;
+  filterTags: string[];
+  hashFilterTags: string[];
+  projectFilter: string | null;
+}
 
 const SAMPLE_CONTENT = `Inbox:
 \t- Write the spec @today
@@ -29,14 +40,12 @@ Personal:
 function archiveDone(content: string): string {
   const lines = content.split('\n');
 
-  // Track which project section each line belongs to
   let currentProject: string | null = null;
   const lineProjects = lines.map(line => {
     if (isProjectLine(line)) currentProject = line.replace(/:\s*$/, '').trim();
     return currentProject;
   });
 
-  // Pull out @done tasks that aren't already in the Done section
   const doneTasks: string[] = [];
   const remainingLines: string[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -50,16 +59,13 @@ function archiveDone(content: string): string {
 
   if (doneTasks.length === 0) return content;
 
-  // Find an existing "Done:" section
   const doneHeaderIdx = remainingLines.findIndex(
     l => isProjectLine(l) && l.replace(/:\s*$/, '').trim() === 'Done'
   );
 
   if (doneHeaderIdx !== -1) {
-    // Prepend to the top of the existing Done section
     remainingLines.splice(doneHeaderIdx + 1, 0, ...doneTasks);
   } else {
-    // Create a new Done section at the bottom
     while (remainingLines.length > 0 && remainingLines[remainingLines.length - 1].trim() === '') {
       remainingLines.pop();
     }
@@ -70,153 +76,263 @@ function archiveDone(content: string): string {
 }
 
 export default function App() {
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [hashFilterTags, setHashFilterTags] = useState<string[]>([]);
-  const [projectFilter, setProjectFilter] = useState<string | null>(null);
-  const [content, setContent] = useState(SAMPLE_CONTENT);
-  const [filePath, setFilePath] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
-  const [copied, setCopied] = useState(false);
+  const tabIdCounter = useRef(1);
+
+  const [tabs, setTabs] = useState<Tab[]>([{
+    id: 'tab-0',
+    filePath: null,
+    fileName: null,
+    content: SAMPLE_CONTENT,
+    saveStatus: 'saved',
+    filterTags: [],
+    hashFilterTags: [],
+    projectFilter: null,
+  }]);
+  const [activeTabId, setActiveTabId] = useState('tab-0');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [copied, setCopied] = useState(false);
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
+
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+
+  const editorRefsMap = useRef(new Map<string, EditorView>());
   const editorRef = useRef<EditorView | null>(null);
-  const filePathRef = useRef<string | null>(null);
-  const contentRef = useRef(content);
+  const saveTimeoutsRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
-  filePathRef.current = filePath;
-  contentRef.current = content;
+  const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
 
-  const lastFileName = getLastFileName();
-
-  // On mount: restore last file directly — no permission prompt needed in Tauri
+  // Restore last file into the initial tab on mount
   useEffect(() => {
-    restoreLastFile().then((result) => {
+    restoreLastFile().then(result => {
       if (!result) return;
-      setFilePath(result.path);
-      filePathRef.current = result.path;
-      setFileName(result.name);
-      setContent(result.content);
-      setSaveStatus('saved');
+      setTabs(prev => prev.map((t, i) =>
+        i === 0 && t.filePath === null
+          ? { ...t, filePath: result.path, fileName: result.name, content: result.content, saveStatus: 'saved' }
+          : t
+      ));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save immediately when the window loses focus (switching apps, closing)
+  // Save active tab immediately on window hide
   useEffect(() => {
     const onHide = () => {
-      const path = filePathRef.current;
-      if (!path) return;
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveFile(path, contentRef.current).then(() => setSaveStatus('saved')).catch(() => {});
+      const tab = tabsRef.current.find(t => t.id === activeTabIdRef.current);
+      if (!tab?.filePath) return;
+      const timeout = saveTimeoutsRef.current.get(tab.id);
+      if (timeout) { clearTimeout(timeout); saveTimeoutsRef.current.delete(tab.id); }
+      saveFile(tab.filePath, tab.content)
+        .then(() => setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, saveStatus: 'saved' } : t)))
+        .catch(() => {});
     };
     document.addEventListener('visibilitychange', onHide);
     return () => document.removeEventListener('visibilitychange', onHide);
   }, []);
 
-  // Parse projects, @tags, and #labels from document content
+  // Parse projects/@tags/#labels for the active tab
   const { projects, allTags, allHashtags } = useMemo(() => {
     const projectList: Array<{ name: string; lineNum: number }> = [];
     const tagSet = new Set<string>();
     const hashSet = new Set<string>();
-    content.split('\n').forEach((line, i) => {
-      if (/^[^\t-].*:\s*$/.test(line) && line.trim().length > 1) {
+    activeTab.content.split('\n').forEach((line, i) => {
+      if (/^[^\t-].*:\s*$/.test(line) && line.trim().length > 1)
         projectList.push({ name: line.replace(/:\s*$/, '').trim(), lineNum: i + 1 });
-      }
       for (const m of line.matchAll(/@([\w-]+)/g)) tagSet.add('@' + m[1]);
       for (const m of line.matchAll(/#([\w-]+)/g)) hashSet.add('#' + m[1]);
     });
     return { projects: projectList, allTags: Array.from(tagSet).sort(), allHashtags: Array.from(hashSet).sort() };
-  }, [content]);
+  }, [activeTab.content]);
 
+  // Register/unregister editors
+  const handleEditorReady = useCallback((tabId: string, view: EditorView) => {
+    editorRefsMap.current.set(tabId, view);
+    if (tabId === activeTabIdRef.current) {
+      editorRef.current = view;
+      view.focus();
+    }
+  }, []);
+
+  const handleEditorDestroy = useCallback((tabId: string) => {
+    editorRefsMap.current.delete(tabId);
+    if (tabId === activeTabIdRef.current) editorRef.current = null;
+  }, []);
+
+  // Tab switching
+  const switchToTab = useCallback((tabId: string) => {
+    setActiveTabId(tabId);
+    activeTabIdRef.current = tabId;
+    const view = editorRefsMap.current.get(tabId);
+    editorRef.current = view ?? null;
+    setTimeout(() => editorRefsMap.current.get(tabId)?.focus(), 0);
+  }, []);
+
+  // Tab closing
+  const closeTab = useCallback((tabId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTabs(prev => {
+      if (prev.length === 1) return prev;
+      const idx = prev.findIndex(t => t.id === tabId);
+      const newTabs = prev.filter(t => t.id !== tabId);
+      if (tabId === activeTabIdRef.current) {
+        const next = newTabs[Math.min(idx, newTabs.length - 1)];
+        setActiveTabId(next.id);
+        activeTabIdRef.current = next.id;
+        editorRef.current = editorRefsMap.current.get(next.id) ?? null;
+        setTimeout(() => editorRefsMap.current.get(next.id)?.focus(), 0);
+      }
+      const timeout = saveTimeoutsRef.current.get(tabId);
+      if (timeout) { clearTimeout(timeout); saveTimeoutsRef.current.delete(tabId); }
+      editorRefsMap.current.delete(tabId);
+      return newTabs;
+    });
+  }, []);
+
+  // Content change with debounced auto-save
+  const handleTabChange = useCallback((tabId: string, newContent: string) => {
+    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, content: newContent, saveStatus: 'unsaved' } : t));
+
+    const existing = saveTimeoutsRef.current.get(tabId);
+    if (existing) clearTimeout(existing);
+
+    const timeout = setTimeout(async () => {
+      const filePath = tabsRef.current.find(t => t.id === tabId)?.filePath;
+      if (!filePath) { saveTimeoutsRef.current.delete(tabId); return; }
+      setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'saving' } : t));
+      try {
+        await saveFile(filePath, newContent);
+        setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'saved' } : t));
+      } catch {
+        setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'error' } : t));
+      }
+      saveTimeoutsRef.current.delete(tabId);
+    }, 600);
+    saveTimeoutsRef.current.set(tabId, timeout);
+  }, []);
+
+  // Filter sync from editor (Cmd+click on tags, Escape)
+  const handleFilterChange = useCallback((tags: string[]) => {
+    const tabId = activeTabIdRef.current;
+    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, filterTags: tags } : t));
+  }, []);
+
+  const handleHashFilterChange = useCallback((tags: string[]) => {
+    const tabId = activeTabIdRef.current;
+    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, hashFilterTags: tags } : t));
+  }, []);
+
+  // Filter changes from sidebar
   const handleSetFilter = useCallback((tag: string) => {
-    setFilterTags(prev => {
-      const next = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag];
+    const tabId = activeTabIdRef.current;
+    setTabs(prev => {
+      const tab = prev.find(t => t.id === tabId);
+      if (!tab) return prev;
+      const next = tab.filterTags.includes(tag)
+        ? tab.filterTags.filter(f => f !== tag)
+        : [...tab.filterTags, tag];
       editorRef.current?.dispatch({ effects: setFilterEffect.of(next) });
-      return next;
+      return prev.map(t => t.id === tabId ? { ...t, filterTags: next } : t);
     });
   }, []);
 
   const handleSetHashFilter = useCallback((tag: string) => {
-    setHashFilterTags(prev => {
-      const next = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag];
+    const tabId = activeTabIdRef.current;
+    setTabs(prev => {
+      const tab = prev.find(t => t.id === tabId);
+      if (!tab) return prev;
+      const next = tab.hashFilterTags.includes(tag)
+        ? tab.hashFilterTags.filter(f => f !== tag)
+        : [...tab.hashFilterTags, tag];
       editorRef.current?.dispatch({ effects: setHashFilterEffect.of(next) });
-      return next;
+      return prev.map(t => t.id === tabId ? { ...t, hashFilterTags: next } : t);
     });
   }, []);
 
   const handleSetProjectFilter = useCallback((name: string | null) => {
-    setProjectFilter(name);
+    const tabId = activeTabIdRef.current;
     editorRef.current?.dispatch({ effects: setProjectFilterEffect.of(name) });
+    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, projectFilter: name } : t));
   }, []);
 
-  const triggerAutoSave = useCallback((newContent: string) => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    setSaveStatus('unsaved');
-    saveTimeoutRef.current = setTimeout(async () => {
-      const path = filePathRef.current;
-      if (!path) return;
-      setSaveStatus('saving');
-      try {
-        await saveFile(path, newContent);
-        setSaveStatus('saved');
-      } catch {
-        setSaveStatus('error');
-      }
-    }, 600);
-  }, []);
-
-  const handleChange = useCallback((newContent: string) => {
-    setContent(newContent);
-    contentRef.current = newContent;
-    triggerAutoSave(newContent);
-  }, [triggerAutoSave]);
-
+  // Manual save
   const handleSave = useCallback(async () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    const path = filePathRef.current;
-    if (path) {
-      setSaveStatus('saving');
+    const tabId = activeTabIdRef.current;
+    const tab = tabsRef.current.find(t => t.id === tabId);
+    if (!tab) return;
+
+    const timeout = saveTimeoutsRef.current.get(tabId);
+    if (timeout) { clearTimeout(timeout); saveTimeoutsRef.current.delete(tabId); }
+
+    if (tab.filePath) {
+      setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'saving' } : t));
       try {
-        await saveFile(path, contentRef.current);
-        setSaveStatus('saved');
+        await saveFile(tab.filePath, tab.content);
+        setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'saved' } : t));
       } catch {
-        setSaveStatus('error');
+        setTabs(prev => prev.map(t => t.id === tabId ? { ...t, saveStatus: 'error' } : t));
       }
     } else {
-      const result = await saveNewFile(contentRef.current);
+      const result = await saveNewFile(tab.content);
       if (result) {
-        setFilePath(result.path);
-        filePathRef.current = result.path;
-        setFileName(result.name);
-        setSaveStatus('saved');
+        setTabs(prev => prev.map(t => t.id === tabId
+          ? { ...t, filePath: result.path, fileName: result.name, saveStatus: 'saved' }
+          : t
+        ));
       }
     }
   }, []);
 
+  // Open file (reuse existing tab if already open)
   const handleOpen = useCallback(async () => {
     const result = await openFile();
     if (!result) return;
-    setFilePath(result.path);
-    filePathRef.current = result.path;
-    setFileName(result.name);
-    setContent(result.content);
-    setSaveStatus('saved');
-  }, []);
 
+    const existing = tabsRef.current.find(t => t.filePath === result.path);
+    if (existing) {
+      switchToTab(existing.id);
+      return;
+    }
+
+    const id = `tab-${tabIdCounter.current++}`;
+    setTabs(prev => [...prev, {
+      id,
+      filePath: result.path,
+      fileName: result.name,
+      content: result.content,
+      saveStatus: 'saved',
+      filterTags: [],
+      hashFilterTags: [],
+      projectFilter: null,
+    }]);
+    setActiveTabId(id);
+    activeTabIdRef.current = id;
+  }, [switchToTab]);
+
+  // New file
   const handleNew = useCallback(async () => {
     const result = await saveNewFile('');
     if (!result) return;
-    setFilePath(result.path);
-    filePathRef.current = result.path;
-    setFileName(result.name);
-    setContent('');
-    setSaveStatus('saved');
+    const id = `tab-${tabIdCounter.current++}`;
+    setTabs(prev => [...prev, {
+      id,
+      filePath: result.path,
+      fileName: result.name,
+      content: '',
+      saveStatus: 'saved',
+      filterTags: [],
+      hashFilterTags: [],
+      projectFilter: null,
+    }]);
+    setActiveTabId(id);
+    activeTabIdRef.current = id;
   }, []);
 
   const handleCopy = useCallback(async () => {
-    await copyMarkdown(contentRef.current);
+    const tab = tabsRef.current.find(t => t.id === activeTabIdRef.current);
+    if (!tab) return;
+    await copyMarkdown(tab.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, []);
@@ -231,23 +347,15 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
-        e.preventDefault();
-        handleOpen();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault();
-        handleNew();
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') { e.preventDefault(); handleOpen(); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); handleNew(); }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleOpen, handleNew]);
 
   const statusLabel: Record<SaveStatus, string> = {
-    saved: 'Saved',
-    unsaved: 'Unsaved',
-    saving: 'Saving…',
-    error: 'Error saving',
+    saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', error: 'Error saving',
   };
 
   return (
@@ -256,51 +364,33 @@ export default function App() {
         <div className="toolbar-left">
           <button
             className="sidebar-toggle"
-            onClick={() => setSidebarOpen((v) => !v)}
+            onClick={() => setSidebarOpen(v => !v)}
             title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-label="Toggle sidebar"
           >
             ☰
           </button>
           <span className="app-title">GTDown</span>
-          {fileName && <span className="file-name">{fileName}</span>}
-          {!fileName && lastFileName && (
-            <span className="file-name hint">Last: {lastFileName}</span>
-          )}
         </div>
         <div className="toolbar-right">
-          {projectFilter && (
-            <button
-              className="filter-chip filter-chip--project"
-              onClick={() => handleSetProjectFilter(null)}
-              title="Clear project filter"
-            >
-              {projectFilter} ×
+          {activeTab.projectFilter && (
+            <button className="filter-chip filter-chip--project" onClick={() => handleSetProjectFilter(null)} title="Clear project filter">
+              {activeTab.projectFilter} ×
             </button>
           )}
-          {filterTags.map(tag => (
-            <button
-              key={tag}
-              className="filter-chip"
-              onClick={() => handleSetFilter(tag)}
-              title="Remove filter"
-            >
+          {activeTab.filterTags.map(tag => (
+            <button key={tag} className="filter-chip" onClick={() => handleSetFilter(tag)} title="Remove filter">
               {tag} ×
             </button>
           ))}
-          {hashFilterTags.map(tag => (
-            <button
-              key={tag}
-              className="filter-chip filter-chip--hash"
-              onClick={() => handleSetHashFilter(tag)}
-              title="Remove label filter"
-            >
+          {activeTab.hashFilterTags.map(tag => (
+            <button key={tag} className="filter-chip filter-chip--hash" onClick={() => handleSetHashFilter(tag)} title="Remove label filter">
               {tag} ×
             </button>
           ))}
-          {filePath && (
-            <span className={`save-status save-status--${saveStatus}`}>
-              {statusLabel[saveStatus]}
+          {activeTab.filePath && (
+            <span className={`save-status save-status--${activeTab.saveStatus}`}>
+              {statusLabel[activeTab.saveStatus]}
             </span>
           )}
           <button className="toolbar-btn" onClick={handleOpen} title="Open file (Cmd+O)">Open</button>
@@ -313,29 +403,50 @@ export default function App() {
         </div>
       </header>
 
+      <div className="tab-bar">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`tab${tab.id === activeTabId ? ' tab--active' : ''}`}
+            onClick={() => switchToTab(tab.id)}
+          >
+            {tab.saveStatus === 'unsaved' && <span className="tab-dot" />}
+            <span className="tab-label">{tab.fileName ?? 'Untitled'}</span>
+            {tabs.length > 1 && (
+              <span className="tab-close" onClick={e => closeTab(tab.id, e)} role="button" aria-label="Close tab">×</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="body-wrap">
         {sidebarOpen && (
           <Sidebar
             projects={projects}
             tags={allTags}
             hashtags={allHashtags}
-            activeFilter={filterTags}
-            activeHashFilter={hashFilterTags}
-            activeProjectFilter={projectFilter}
+            activeFilter={activeTab.filterTags}
+            activeHashFilter={activeTab.hashFilterTags}
+            activeProjectFilter={activeTab.projectFilter}
             onSetProjectFilter={handleSetProjectFilter}
             onSetFilter={handleSetFilter}
             onSetHashFilter={handleSetHashFilter}
           />
         )}
         <main className="editor-wrap">
-          <TodoEditor
-            initialContent={content}
-            onChange={handleChange}
-            onSave={handleSave}
-            onFilterChange={setFilterTags}
-            onHashFilterChange={setHashFilterTags}
-            editorRef={editorRef}
-          />
+          {tabs.map(tab => (
+            <div key={tab.id} className={`tab-panel${tab.id === activeTabId ? ' tab-panel--active' : ''}`}>
+              <TodoEditor
+                initialContent={tab.content}
+                onChange={content => handleTabChange(tab.id, content)}
+                onSave={handleSave}
+                onFilterChange={handleFilterChange}
+                onHashFilterChange={handleHashFilterChange}
+                onEditorReady={view => handleEditorReady(tab.id, view)}
+                onEditorDestroy={() => handleEditorDestroy(tab.id)}
+              />
+            </div>
+          ))}
         </main>
       </div>
     </div>

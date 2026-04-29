@@ -203,6 +203,87 @@ html, body {
   }
 }
 
+/* ─── Tab Bar ────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 34px;
+  font-size: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+.tab:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.tab--active {
+  color: var(--color-text);
+  background: var(--color-bg);
+  box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.tab-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition: color 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+.tab-close:hover {
+  color: var(--color-text);
+  background: var(--color-border);
+}
+
+/* ─── Tab Panels ─────────────────────────────────────────────── */
+.tab-panel {
+  display: none;
+}
+.tab-panel--active {
+  display: contents;
+}
+
 /* ─── Body (sidebar + editor) ────────────────────────────────── */
 .body-wrap {
   display: flex;

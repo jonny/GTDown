@@ -142,7 +142,6 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 ### Left Side
 - **Sidebar toggle** (☰) — show/hide sidebar
 - **App title** — "GTDown"
-- **File name** — current open file; shows `Last: {name}` (italic, muted) when no file is open
 
 ### Right Side
 
@@ -164,6 +163,17 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 - **Copy MD** — copy to clipboard; shows "Copied!" for 2 s (Cmd+Shift+C)
 - **Archive Done** — move all `@done` tasks to the Done section
 
+### Tab Bar
+
+Sits below the toolbar. One tab per open file.
+
+- **Tab label** — file name, or "Untitled" for unsaved files
+- **Unsaved dot** — small blue dot appears on the tab when there are unsaved changes
+- **Close button** (×) — visible when more than one tab is open; closes that tab
+- **Active tab** — highlighted with an accent underline
+- Tabs scroll horizontally if many are open
+- Opening a file that is already open switches to its existing tab rather than creating a duplicate
+
 ---
 
 ## File I/O
@@ -184,7 +194,7 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 | Browser (FSA) | `FileSystemFileHandle.createWritable()` |
 | Browser fallback | Download triggered on each save |
 
-**Auto-save:** debounced 600 ms after each document change; also fires immediately on window blur.
+**Auto-save:** debounced 600 ms after each document change; also fires immediately on window blur (active tab only).
 
 ### New File
 
@@ -195,7 +205,7 @@ All colours use CSS custom properties; automatic via `@media (prefers-color-sche
 | Browser fallback | Download with filename `todos.md` |
 
 ### Last File Restoration
-On launch (Tauri only), the last opened path is restored from `localStorage` without a permission prompt. If the file is missing, the stored path is cleared.
+On launch (Tauri only), the last opened path is restored from `localStorage` into the initial tab without a permission prompt. If the file is missing, the stored path is cleared.
 
 ---
 
@@ -293,3 +303,4 @@ Empty state: "No projects yet" shown when no projects exist.
 - **Negative filters** (`!@tag`) are functional but not exposed in the UI beyond the fixed "Not Done" search.
 - **Filter combining** is AND across all active filters: a task must match every selected @tag, every selected #label, and the project filter (if set).
 - **Last file restore** works on Tauri only; browsers require a user gesture to re-open a file handle.
+- **Multi-tab state isolation:** each tab maintains its own CodeMirror instance (mounted but hidden when inactive), preserving undo history, cursor position, and filter state independently per tab.

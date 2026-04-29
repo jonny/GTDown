@@ -9,21 +9,26 @@ interface TodoEditorProps {
   onSave: () => void;
   onFilterChange?: (tags: string[]) => void;
   onHashFilterChange?: (tags: string[]) => void;
-  editorRef?: React.MutableRefObject<EditorView | null>;
+  onEditorReady?: (view: EditorView) => void;
+  onEditorDestroy?: () => void;
 }
 
-export function TodoEditor({ initialContent, onChange, onSave, onFilterChange, onHashFilterChange, editorRef }: TodoEditorProps) {
+export function TodoEditor({ initialContent, onChange, onSave, onFilterChange, onHashFilterChange, onEditorReady, onEditorDestroy }: TodoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
   const onFilterChangeRef = useRef(onFilterChange);
   const onHashFilterChangeRef = useRef(onHashFilterChange);
+  const onEditorReadyRef = useRef(onEditorReady);
+  const onEditorDestroyRef = useRef(onEditorDestroy);
 
   onChangeRef.current = onChange;
   onSaveRef.current = onSave;
   onFilterChangeRef.current = onFilterChange;
   onHashFilterChangeRef.current = onHashFilterChange;
+  onEditorReadyRef.current = onEditorReady;
+  onEditorDestroyRef.current = onEditorDestroy;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -52,15 +57,12 @@ export function TodoEditor({ initialContent, onChange, onSave, onFilterChange, o
     });
 
     viewRef.current = view;
-    if (editorRef) editorRef.current = view;
-
-    // Focus the editor
-    view.focus();
+    onEditorReadyRef.current?.(view);
 
     return () => {
+      onEditorDestroyRef.current?.();
       view.destroy();
       viewRef.current = null;
-      if (editorRef) editorRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
